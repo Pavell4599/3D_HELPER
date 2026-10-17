@@ -4,7 +4,7 @@ import subprocess
 # 1. Пути к файлам (замените на свои, если они отличаются)
 SLICER_EXE = r"C:\Program Files\Bambu Studio\bambu-studio.exe"
 MODEL_STL = r"C:\Users\Павел\Downloads\Jean_Bunny_Girl.stl"
-SETTINGS_JSON = r"Data\settings\process.json"
+SETTINGS_JSON = r"Data\settings\process_a1.json"
 OUTPUT_3MF = r"Backend\static\settings\TEST.3mf"
 
 def convert_stl_to_3mf():
