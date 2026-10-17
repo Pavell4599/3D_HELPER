@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Helper Pro</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Кастомный заголовок окна -->
+    <div class="title-bar" data-tauri-drag-region>
+        <div class="logo">3D HELPER <span class="badge">AI</span></div>
+        <div class="window-controls">
+            <button onclick="minimize()">─</button>
+            <button onclick="closeWindow()">✕</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Боковое меню -->
+        <nav class="sidebar">
+            <button class="nav-btn active" onclick="switchTab('organizer')">📂 Organizer</button>
+            <button class="nav-btn" onclick="switchTab('slicer')">⚙️ Slicer AI</button>
+            <div class="status-indicator">
+                <div class="dot"></div> Core: Active
+            </div>
+        </nav>
+
+        <!-- Основной контент -->
+        <main class="content">
+            
+            <!-- Вкладка 1: Упорядочивание -->
+            <section id="tab-organizer" class="tab-content active">
+                <h2>Упорядочивание моделей</h2>
+                <p class="subtitle">Автоматическая сортировка по папкам (ModelNet)</p>
+                
+                <div class="card">
+                    <label>Целевая папка</label>
+                    <div class="input-group">
+                        <input type="text" id="folder-path" placeholder="C:/Models/Unsorted" readonly>
+                        <button class="icon-btn" onclick="selectFolder()">📁</button>
+                    </div>
+                    
+                    <label>Форматы</label>
+                    <div class="tags">
+                        <span class="tag active">.STL</span>
+                        <span class="tag active">.OBJ</span>
+                    </div>
+
+                    <button class="primary-btn" onclick="runOrganizer()">Запустить сканирование</button>
+                    <div id="org-log" class="log-box">Ожидание...</div>
+                </div>
+            </section>
+
+            <!-- Вкладка 2: Слайсер -->
+            <section id="tab-slicer" class="tab-content">
+                <h2>Подбор настроек печати</h2>
+                <p class="subtitle">ИИ-анализ геометрии для идеального слайсинга</p>
+
+                <div class="split-view">
+                    <div class="upload-zone">
+                        <input type="file" id="model-file" accept=".stl,.obj">
+                        <label for="model-file" class="drop-zone">Перетащите модель сюда</label>
+                        <select id="slicer-select">
+                            <option value="Cura">Ultimaker Cura</option>
+                            <option value="PrusaSlicer">PrusaSlicer</option>
+                        </select>
+                        <button class="primary-btn" onclick="analyzeModel()">Анализировать</button>
+                    </div>
+
+                    <div class="preview-zone">
+                        <model-viewer id="viewer" camera-controls auto-rotate shadow-intensity="1"></model-viewer>
+                        <div id="settings-result" class="settings-panel hidden">
+                            <h3>Рекомендации:</h3>
+                            <pre id="json-output"></pre>
+                            <button class="secondary-btn">Скачать .json</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // Навигация
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Логика Organizer
+        async function runOrganizer() {
+            const path = document.getElementById('folder-path').value;
+            const log = document.getElementById('org-log');
+            if(!path) { log.innerText = "Ошибка: Выберите папку"; return; }
+
+            log.innerText = "Сканирование и классификация...";
+            
+            try {
+                const res = await fetch('http://127.0.0.1:8000/organize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ path: path })
+                });
+                const data = await res.json();
+                log.innerText = `Обработано: ${data.processed}\n\n${JSON.stringify(data.details, null, 2)}`;
+            } catch (e) {
+                log.innerText = "Ошибка: Не удалось подключиться к ядру.";
+            }
+        }
+
+        // Логика Slicer
+        async function analyzeModel() {
+            const fileInput = document.getElementById('model-file');
+            if(fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            document.getElementById('json-output').innerText = "Анализ геометрии...";
+            document.getElementById('settings-result').classList.remove('hidden');
+            
+            // Демо-превью
+            document.getElementById('viewer').setAttribute('src', 'https://modelviewer.dev/shared-assets/models/Astronaut.glb');
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/analyze-model', { method: 'POST', body: formData });
+                const data = await res.json();
+                const slicer = document.getElementById('slicer-select').value;
+                document.getElementById('json-output').innerText = JSON.stringify(data.settings[slicer], null, 2);
+            } catch (e) { console.error(e); }
+        }
+
+        // Управление окном Tauri
+        import { getCurrentWindow } from '@tauri-apps/api/window';
+        const win = getCurrentWindow();
+        function minimize() { win.minimize(); }
+        function closeWindow() { win.close(); }
+        
+        // Заглушка выбора папки (в реальном Tauri нужно использовать invoke)
+        function selectFolder() {
+            document.getElementById('folder-path').value = "C:/Demo/Path/To/Models";
+        }
+    </script>
+</body>
+</html>
