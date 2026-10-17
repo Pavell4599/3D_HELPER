@@ -1,6 +1,5 @@
 
 import os
-import csv
 import shutil
 import threading
 from datetime import datetime
@@ -18,24 +17,14 @@ from pointnet_core import PointNetClassifier, SUPPORTED_FORMATS
 
 
 # ---------- Конфиг по умолчанию ----------
-WEIGHTS_DEFAULT = "best_pointnet_modelnet10.pth"
-CSV_DEFAULT     = "metadata_modelnet10.csv"
+WEIGHTS_DEFAULT = "best_pointnet_modelnet40.pth"
+
 
 
 # =============================================================================
 #  Утилиты
 # =============================================================================
-def load_classes_from_csv(csv_path):
-    """
-    Достаёт отсортированный список классов — ровно как при обучении.
-    Порядок sorted() критичен: он должен совпадать с class_to_idx из обучения.
-    """
-    import pandas as pd
-    df = pd.read_csv(csv_path)
-    df = df[~df['object_path'].astype(str).str.contains('.DS', na=True)]
-    df = df[~df['class'].astype(str).str.contains('.DS', na=True)]
-    df = df.dropna(subset=['object_path'])
-    return sorted(df['class'].astype(str).unique())
+
 
 
 def safe_copy(src, dst_dir):
