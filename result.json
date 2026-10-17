@@ -1,0 +1,65 @@
+{
+    "error_string": "Success.",
+    "export_time": 0,
+    "layer_height": 0.20000000298023224,
+    "plate_index": 0,
+    "prepare_time": 7833,
+    "return_code": 0,
+    "sliced_plates": [
+        {
+            "feature_type_times": {
+                "Bridge": 681.3098754882813,
+                "Brim": 1.5778194665908813,
+                "Custom": 398.4234313964844,
+                "Flush": 26.0,
+                "Gap infill": 392.9222412109375,
+                "Inner wall": 5311.509765625,
+                "Internal solid infill": 5177.41845703125,
+                "Outer wall": 7830.87548828125,
+                "Overhang wall": 753.0487060546875,
+                "Sparse infill": 11005.4423828125,
+                "Top surface": 349.94378662109375,
+                "Travel": 3347.999267578125,
+                "Undefined": 3342.803955078125
+            },
+            "filament_change_times": 0,
+            "filaments": [
+                {
+                    "filament_id": "unknown",
+                    "id": 1,
+                    "main_used_g": 0.0,
+                    "total_used_g": 0.0
+                }
+            ],
+            "generate_support_material_time": 2742,
+            "id": 1,
+            "infill_time": 10363,
+            "layer_filament_change": 0,
+            "main_predication": 34826.515625,
+            "make_perimeters_time": 11507,
+            "obj_cached_cnt": 0,
+            "objects": [
+                {
+                    "bbox": {
+                        "depth": 245.49932861328125,
+                        "height": 61.728912353515625,
+                        "width": 245.49932861328125,
+                        "x": 9.116317749023438,
+                        "y": 6.447062015533447,
+                        "z": 0.0
+                    },
+                    "id": 5,
+                    "name": "Jean_Bunny_Girl.stl",
+                    "triangle_count": 554004
+                }
+            ],
+            "sliced_time": 38982,
+            "sliced_time_with_cache": 12933,
+            "total_predication": 35271.71484375,
+            "triangle_count": 554004,
+            "warning_message": "It seems object Jean_Bunny_Girl.stl has floating regions. Please re-orient the object or enable support generation."
+        }
+    ],
+    "sparse_infill_density": 15.0,
+    "wall_loops": 2
+}
