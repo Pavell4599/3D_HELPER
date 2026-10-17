@@ -6,10 +6,12 @@ from pydantic import BaseModel
 import os
 import shutil
 import json
+import random
 import asyncio
 
-app = FastAPI(title="3D Helper Backend")
+app = FastAPI(title="3D Helper Core")
 
+# Разрешаем Tauri обращаться к нам
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,76 +23,68 @@ app.add_middleware(
 # --- Модели данных ---
 class ScanRequest(BaseModel):
     path: str
-    formats: list[str] = [".stl", ".obj", ".fbx"]
+    formats: list[str] = [".stl", ".obj"]
 
-class SlicerSettings(BaseModel):
-    slicer_name: str
-    model_class: str
-
-# --- 1. Логика Упорядочивания (Organizer) ---
+# --- 1. Упорядочивание (Organizer) ---
 @app.post("/organize")
 async def organize_folder(request: ScanRequest):
     """
-    Сканирует папку, классифицирует файлы и раскладывает их по папкам.
+    Сканирует папку, имитирует классификацию ModelNet и раскладывает файлы.
     """
-    print(f"[Python] Сканирование папки: {request.path}")
+    print(f"[AI CORE] Сканирование: {request.path}")
     
-    # ЗАГЛУШКА: Имитация работы ModelNet
-    # В реальности здесь будет загрузка модели и предсказание класса
-    categories = {"Мебель": [], "Детали": [], "Фигурки": []}
-    
-    # Имитация поиска файлов
-    if os.path.exists(request.path):
-        for file in os.listdir(request.path):
-            if any(file.endswith(fmt) for fmt in request.formats):
-                # Случайное распределение для демо
-                import random
-                cat = random.choice(list(categories.keys()))
-                categories[cat].append(file)
-                
-                # Создание папки и перемещение (в демо режиме просто логируем)
-                target_dir = os.path.join(request.path, cat)
-                os.makedirs(target_dir, exist_ok=True)
-                # shutil.move(os.path.join(request.path, file), os.path.join(target_dir, file)) 
-                
+    if not os.path.exists(request.path):
+        return {"status": "error", "message": "Папка не найдена"}
+
+    categories = {"Мебель": [], "Детали": [], "Фигурки": [], "Архитектура": []}
+    processed_count = 0
+
+    # Имитация работы нейросети ModelNet
+    for file in os.listdir(request.path):
+        ext = os.path.splitext(file)[1].lower()
+        if ext in request.formats:
+            # В реальности здесь будет предсказание модели
+            category = random.choice(list(categories.keys()))
+            categories[category].append(file)
+            
+            target_dir = os.path.join(request.path, category)
+            os.makedirs(target_dir, exist_ok=True)
+            
+            src_file = os.path.join(request.path, file)
+            dst_file = os.path.join(target_dir, file)
+            
+            # Реальное перемещение файла
+            try:
+                shutil.move(src_file, dst_file)
+                processed_count += 1
+            except Exception as e:
+                print(f"Ошибка перемещения {file}: {e}")
+
     return {
         "status": "success",
-        "message": f"Обработано файлов. Распределено по категориям: {', '.join(categories.keys())}",
+        "processed": processed_count,
         "details": categories
     }
 
-# --- 2. Логика Подбора Настроек (Slicer Assistant) ---
+# --- 2. Подбор настроек (Slicer Assistant) ---
 @app.post("/analyze-model")
 async def analyze_model(file: UploadFile = File(...)):
     """
-    Анализирует 3D модель и возвращает настройки печати.
+    Анализирует модель и выдает настройки для слайсера.
     """
-    print(f"[Python] Анализ модели: {file.filename}")
-    
-    # Имитация анализа геометрии
-    await asyncio.sleep(1.5)
-    
-    # Пример настроек для разных слайсеров
+    print(f"[AI CORE] Анализ модели: {file.filename}")
+    await asyncio.sleep(1) # Имитация анализа геометрии
+
     settings = {
-        "Cura": {
-            "layer_height": 0.2,
-            "infill_density": 20,
-            "support_type": "Tree",
-            "material": "PLA"
-        },
-        "PrusaSlicer": {
-            "layer_height": 0.15,
-            "infill_density": 15,
-            "supports": "Organic",
-            "material": "PETG"
-        }
+        "Cura": {"layer_height": 0.2, "infill": 20, "support": "Tree"},
+        "PrusaSlicer": {"layer_height": 0.15, "infill": 15, "support": "Organic"},
+        "OrcaSlicer": {"layer_height": 0.16, "infill": 18, "support": "Auto"}
     }
-    
+
     return {
-        "status": "success",
         "model_name": file.filename,
-        "detected_complexity": "Medium", # Результат работы ИИ
-        "recommended_settings": settings
+        "complexity": "Medium",
+        "settings": settings
     }
 
 if __name__ == "__main__":
