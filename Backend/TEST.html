@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3d helper</title>
+</head>
+<body>
+    
+</body>
+</html>
+
+
+
+
+
+with gr.Blocks(title="PointNet Fast Classifier") as demo:
+    gr.Markdown("<span style='font-size: 40px;'> лассификатор 3Д моделей(PointNet)</span>")
+    gr.Markdown("<span style='font-size: 33px;'>Доступные форматы: **.obj  .stl  .ply  .off  .gltf  .glb  .3mdl  .dae**</span>")
+    
+    with gr.Row():
+        with gr.Column():
+            # Обычное поле загрузки файлов
+            file_input = gr.File(label="Загрузите файл 3Д модели")
+            submit_btn = gr.Button("Угадать класс", variant="primary")
+            
+        with gr.Column():
+            # Результаты предсказания
+            output_labels = gr.Label(label="Результат (Top-3 вероятных класса)", num_top_classes=3)
+            
+    # Привязываем обработку к кнопке
+    submit_btn.click(
+        fn=predict_only, 
+        inputs=file_input, 
+        outputs=output_labels
+    )
+
+if __name__ == "__main__":
+    demo.launch()

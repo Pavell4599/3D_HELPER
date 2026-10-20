@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import gradio as gr
 import trimesh
 
 
@@ -18,7 +19,7 @@ CLASSES = ['airplane', 'bathtub', 'bed', 'bench', 'bookshelf',
 'piano', 'plant', 'radio', 'range', 'sink', 
 'sofa', 'stairs', 'stool', 'table', 'tent', 
 'toilet', 'tv', 'vase', 'wardrobe', 'xbox']
-WEIGHTS_PATH = "model/best_pointnet_modelnet40.pth" 
+WEIGHTS_PATH = "best_pointnet_modelnet40.pth" 
 
 # =============================================================================
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ И ВЕСОВ
@@ -103,6 +104,19 @@ def convert_to_off(input_path: str, output_path: str) -> bool:
         print(f"Критическая ошибка при обработке файла {input_path}: {e}")
         return False
 
+# --- Пример использования в вашем ИИ-пайплайне ---
+if __name__ == "__main__":
+    # Скрипт «проглотит» любой из этих форматов:
+    test_files = ["model.fbx", "part.stl", "avatar.gltf", "scan.ply", "building.obj"]
+    
+    # Симуляция работы функции
+    input_file = "my_input_model.fbx"  # Подставьте имя вашего файла
+    output_file = "converted_model.off"
+    
+    success = convert_to_off(input_file, output_file)
+    if success:
+        print("Файл готов к подаче на вход нейросети!")
+
 # =============================================================================
 # ФУНКЦИЯ ОБРАБОТКИ И ИНФЕРЕНСА
 # =============================================================================
@@ -169,19 +183,30 @@ def predict_only(file_obj):
         return {f"Ошибка при чтении или обработке файла: {str(e)}": 1.0}
 
 
-if __name__ == '__main__':
-    print('попа')
-
+# =============================================================================
+# ЛЕГКИЙ ИНТЕРФЕЙС GRADIO
+# =============================================================================
+with gr.Blocks(title="PointNet Fast Classifier") as demo:
+    gr.Markdown("<span style='font-size: 40px;'> лассификатор 3Д моделей(PointNet)</span>")
+    gr.Markdown("<span style='font-size: 33px;'>Доступные форматы: **.obj  .stl  .ply  .off  .gltf  .glb  .3mdl  .dae**</span>")
+    
+    with gr.Row():
+        with gr.Column():
+            # Обычное поле загрузки файлов
+            file_input = gr.File(label="Загрузите файл 3Д модели")
+            submit_btn = gr.Button("Угадать класс", variant="primary")
+            
+        with gr.Column():
+            # Результаты предсказания
+            output_labels = gr.Label(label="Результат (Top-3 вероятных класса)", num_top_classes=3)
+            
+    # Привязываем обработку к кнопке
+    submit_btn.click(
+        fn=predict_only, 
+        inputs=file_input, 
+        outputs=output_labels
+    )
 
 if __name__ == "__main__":
-    # Скрипт «проглотит» любой из этих форматов:
-    test_files = ["model.fbx", "part.stl", "avatar.gltf", "scan.ply", "building.obj"]
-    
-    # Симуляция работы функции
-    input_file = "my_input_model.fbx"  # Подставьте имя вашего файла
-    output_file = "converted_model.off"
-    
-    success = convert_to_off(input_file, output_file)
-    if success:
-        print("Файл готов к подаче на вход нейросети!")
+    demo.launch()
 
