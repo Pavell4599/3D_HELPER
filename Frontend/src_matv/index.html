@@ -1,238 +1,1060 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Helper | ModelNet40</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div class="page-shell">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">AI 3D assistant</p>
-          <h1>3D HELPER</h1>
-        </div>
-        <span class="status-pill">ModelNet40</span>
-      </header>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Помощник — нейросеть для 3D-моделей и печати</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --paper: #fbf9f4;
+    --ink: #111110;
+    --ink-soft: #4a4843;
+    --ink-muted: #8a877e;
+    --line: #d8d3c7;
+    --line-soft: #e6e1d6;
+    --accent: #e8541e;
+    --accent-soft: #f7e4db;
+    --green: #2f7d4f;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'Inter Tight', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
 
-      <main class="app-grid">
-        <section class="panel upload-panel">
-          <h2>Load 3D model</h2>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
 
-          <label class="upload-button" for="model-input">Choose file</label>
-          <input id="model-input" type="file" accept=".stl,.obj,.glb,.gltf,.ply" />
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
 
-          <div id="selected-file" class="file-name">No model selected</div>
+  ::selection { background: var(--accent); color: var(--paper); }
+  h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+  .serif { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01em; }
+  .mono { font-family: var(--mono); font-size: 0.82em; letter-spacing: 0.02em; text-transform: uppercase; }
 
-          <button id="analyze-btn" class="primary-btn" type="button">Analyze model</button>
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+  @media (max-width: 720px) { .wrap { padding: 0 22px; } }
 
-          <div class="predict-box">
-            <span>Predicted class</span>
-            <strong id="predicted-class">Waiting...</strong>
-          </div>
-        </section>
+  /* ================= HEADER ================= */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(244, 241, 234, 0.88);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand-mark { font-family: var(--serif); font-size: 26px; line-height: 1; font-style: italic; }
+  .brand-mark span { color: var(--accent); }
+  .brand-sub { font-size: 12px; color: var(--ink-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    color: var(--ink-soft); text-decoration: none; font-size: 15px; font-weight: 500;
+    position: relative; padding-bottom: 2px;
+  }
+  .nav-links a::after {
+    content: ''; position: absolute; left: 0; bottom: -2px; width: 0; height: 1px;
+    background: var(--ink); transition: width 0.28s cubic-bezier(.6,.1,.2,1);
+  }
+  .nav-links a:hover::after { width: 100%; }
 
-        <section class="panel preview-panel">
-          <h2>Preview</h2>
-          <div class="viewer-wrap">
-            <model-viewer
-              id="viewer"
-              camera-controls
-              auto-rotate
-              shadow-intensity="1"
-              exposure="1"
-              alt="3D model preview"
-            ></model-viewer>
-            <div id="preview-empty" class="preview-empty">Upload a 3D model to preview it here.</div>
-          </div>
-        </section>
-      </main>
+  .nav-actions { display: flex; align-items: center; gap: 14px; }
+  .nav-login { color: var(--ink-soft); text-decoration: none; font-size: 15px; font-weight: 500; }
+  .nav-login:hover { color: var(--ink); }
+  .nav-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--ink); color: var(--paper); text-decoration: none;
+    padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 600;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .nav-cta:hover { background: var(--accent); transform: translateY(-1px); }
+  .nav-cta svg { width: 13px; height: 13px; }
+  @media (max-width: 940px) { .nav-links { display: none; } .nav-login { display: none; } }
 
-      <section class="panel results-panel">
-        <div class="results-header">
-          <h2>AI result blocks</h2>
-          <span id="result-tag" class="muted-tag">No data yet</span>
-        </div>
-        <div id="result-grid" class="result-grid"></div>
-      </section>
+  /* ================= HERO ================= */
+  .hero { padding: 72px 0 0; position: relative; }
+
+  .hero-eyebrow-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 40px; flex-wrap: wrap; gap: 16px;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--ink-muted); letter-spacing: 0.04em;
+  }
+  .hero-eyebrow .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-soft); }
+    50% { box-shadow: 0 0 0 7px var(--accent-soft); }
+  }
+  .hero-modelnet {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em;
+    color: var(--ink-muted); text-transform: uppercase;
+  }
+  .hero-modelnet b { color: var(--ink); font-weight: 600; }
+
+  .hero-title {
+    font-size: clamp(48px, 8.6vw, 132px);
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+    margin-bottom: 44px;
+  }
+  .hero-title .row { display: block; }
+  .hero-title .accent-word { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+  .hero-title .outline { -webkit-text-stroke: 1.5px var(--ink); color: transparent; }
+
+  /* ================= APP ================= */
+  .app {
+    background: var(--ink); color: var(--paper);
+    border-radius: 6px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 1.15fr;
+    margin-bottom: 0;
+    box-shadow: 0 40px 100px -50px rgba(0,0,0,0.5);
+  }
+
+  .app-upload {
+    padding: 40px 36px;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    display: flex; flex-direction: column;
+  }
+  .app-tabs {
+    display: flex; gap: 4px; margin-bottom: 28px;
+    background: rgba(255,255,255,0.05); padding: 4px; border-radius: 100px;
+    align-self: flex-start;
+  }
+  .app-tab {
+    padding: 8px 18px; border-radius: 100px; font-size: 13px; font-weight: 600;
+    color: rgba(255,255,255,0.55); cursor: pointer; border: none;
+    background: transparent; font-family: var(--sans);
+    transition: all 0.2s;
+  }
+  .app-tab.active { background: var(--accent); color: #fff; }
+
+  .dropzone {
+    border: 1.5px dashed rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 44px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: rgba(255,255,255,0.02);
+    margin-bottom: 24px;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: rgba(232,84,30,0.08);
+  }
+  .dropzone .dz-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(232,84,30,0.15); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 18px;
+  }
+  .dropzone .dz-icon svg { width: 24px; height: 24px; }
+  .dropzone h4 { font-size: 17px; margin-bottom: 6px; color: #fff; font-weight: 600; }
+  .dropzone p { font-size: 13.5px; color: rgba(255,255,255,0.45); margin-bottom: 18px; }
+  .dropzone .formats {
+    display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  }
+  .dropzone .formats span {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.12);
+    padding: 3px 8px; border-radius: 4px;
+  }
+
+  .app-options { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+  .opt-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13.5px; color: rgba(255,255,255,0.7);
+    gap: 12px;
+  }
+  .opt-row label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .opt-row input[type="checkbox"] {
+    appearance: none; width: 16px; height: 16px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.25); background: transparent;
+    cursor: pointer; position: relative; flex-shrink: 0;
+  }
+  .opt-row input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+  .opt-row input[type="checkbox"]:checked::after {
+    content: '✓'; position: absolute; inset: 0; color: #fff; font-size: 11px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+
+  /* ================= КАСТОМНЫЙ ДРОПДАУН ================= */
+  .custom-select { position: relative; }
+
+  .cs-trigger {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.85);
+    padding: 7px 12px; border-radius: 6px;
+    font-family: var(--sans); font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    min-width: 150px; justify-content: space-between;
+  }
+  .cs-trigger:hover {
+    border-color: rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.09);
+  }
+  .cs-trigger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .custom-select.open .cs-trigger {
+    border-color: var(--accent);
+    background: rgba(232,84,30,0.1);
+  }
+  .cs-arrow {
+    width: 14px; height: 14px;
+    transition: transform 0.25s cubic-bezier(.6,.1,.2,1);
+    color: rgba(255,255,255,0.5);
+    flex-shrink: 0;
+  }
+  .custom-select.open .cs-arrow {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+
+  .cs-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 100%;
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 6px;
+    list-style: none;
+    z-index: 50;
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.6);
+    opacity: 0; visibility: hidden; transform: translateY(-6px);
+    transition: opacity 0.2s cubic-bezier(.2,.6,.2,1),
+                transform 0.2s cubic-bezier(.2,.6,.2,1),
+                visibility 0.2s;
+  }
+  .custom-select.open .cs-menu {
+    opacity: 1; visibility: visible; transform: translateY(0);
+  }
+
+  .cs-option {
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    white-space: nowrap;
+  }
+  .cs-option:hover, .cs-option.focused {
+    background: rgba(232,84,30,0.18);
+    color: #fff;
+  }
+  .cs-option.selected {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .cs-option.selected::after {
+    content: '✓';
+    font-size: 12px;
+  }
+
+  .app-run {
+    margin-top: auto;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--accent); color: #fff; border: none;
+    padding: 15px 28px; border-radius: 100px; font-weight: 700; font-size: 15px;
+    font-family: var(--sans); cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .app-run:hover { transform: translateY(-2px); background: #f96332; }
+  .app-run svg { width: 16px; height: 16px; }
+
+  .app-result {
+    padding: 40px 36px;
+    background: rgba(255,255,255,0.015);
+    display: flex; flex-direction: column;
+  }
+  .result-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 18px; margin-bottom: 22px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .result-head h5 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 500;
+  }
+  .result-status {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+    color: var(--green); text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .result-status::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; box-shadow: 0 0 8px currentColor;
+  }
+
+  .result-file {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 26px;
+  }
+  .result-thumb {
+    width: 56px; height: 56px; border-radius: 8px;
+    background: linear-gradient(135deg, rgba(232,84,30,0.25), rgba(232,84,30,0.05));
+    border: 1px solid rgba(232,84,30,0.3);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent); flex-shrink: 0;
+  }
+  .result-thumb svg { width: 26px; height: 26px; }
+  .result-file .fname { font-size: 15px; font-weight: 600; color: #fff; }
+  .result-file .fmeta { font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+  .result-class {
+    background: rgba(232,84,30,0.1); border: 1px solid rgba(232,84,30,0.25);
+    border-radius: 10px; padding: 18px 20px; margin-bottom: 26px;
+  }
+  .result-class .rc-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 8px;
+  }
+  .result-class .rc-value {
+    font-family: var(--serif); font-style: italic; font-size: 28px;
+    color: var(--accent); line-height: 1;
+  }
+  .result-class .rc-conf {
+    font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.45);
+    margin-top: 6px;
+  }
+  .result-class .rc-conf b { color: var(--green); font-weight: 600; }
+
+  .params { display: flex; flex-direction: column; gap: 0; }
+  .param {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 13px;
+  }
+  .param:last-child { border-bottom: none; }
+  .param .pk { color: rgba(255,255,255,0.5); font-family: var(--mono); font-size: 11.5px; }
+  .param .pv { color: #fff; font-weight: 500; font-family: var(--mono); font-size: 12px; }
+  .param .pv.accent { color: var(--accent); }
+
+  .result-actions {
+    display: flex; gap: 10px; margin-top: 24px; padding-top: 22px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .result-actions button {
+    flex: 1; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    font-family: var(--sans); cursor: pointer; border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: rgba(255,255,255,0.8); transition: all 0.2s;
+  }
+  .result-actions button:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+  .result-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .result-actions button.primary:hover { background: #f96332; }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .app-upload { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  }
+  @media (max-width: 500px) {
+    .app-upload, .app-result { padding: 28px 22px; }
+    .opt-row { flex-wrap: wrap; }
+    .cs-trigger { width: 100%; }
+    .custom-select { width: 100%; }
+  }
+
+  /* ================= ЛЕНТА ================= */
+  .marquee {
+    border-bottom: 1px solid var(--ink);
+    overflow: hidden; padding: 14px 0; background: var(--ink); color: var(--paper);
+    margin-top: 64px;
+  }
+  .marquee-track {
+    display: flex; white-space: nowrap;
+    animation: scroll 34s linear infinite;
+    font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500;
+  }
+  .marquee-track span { padding: 0 28px; display: inline-flex; align-items: center; gap: 28px; }
+  .marquee-track span::after { content: '✦'; color: var(--accent); font-size: 12px; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ================= СЕКЦИИ ================= */
+  section { padding: 100px 0; }
+  @media (max-width: 720px) { section { padding: 64px 0; } }
+
+  .section-head {
+    display: grid; grid-template-columns: 180px 1fr; gap: 40px;
+    margin-bottom: 64px; align-items: end;
+  }
+  .section-num {
+    font-family: var(--mono); font-size: 13px; color: var(--accent);
+    letter-spacing: 0.1em; padding-top: 12px; border-top: 1px solid var(--accent);
+    display: inline-block;
+  }
+  .section-title { font-size: clamp(34px, 4.6vw, 64px); line-height: 1.02; }
+  .section-title .serif { color: var(--ink-soft); }
+  .section-sub { font-size: 17px; color: var(--ink-muted); margin-top: 18px; max-width: 560px; }
+  @media (max-width: 720px) {
+    .section-head { grid-template-columns: 1fr; gap: 20px; margin-bottom: 40px; }
+  }
+
+  /* ================= ЗАДАЧИ ================= */
+  .tasks { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--line); }
+  .task { padding: 48px 44px 48px 0; border-bottom: 1px solid var(--line); position: relative; }
+  .task + .task { padding-left: 44px; border-left: 1px solid var(--line); padding-right: 0; }
+  .task-tag {
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: 22px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--ink-muted);
+  }
+  .task-tag .idx {
+    background: var(--accent); color: var(--paper);
+    width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .task h3 { font-size: 30px; margin-bottom: 16px; line-height: 1.1; }
+  .task h3 em { font-family: var(--serif); font-weight: 400; color: var(--accent); }
+  .task p { color: var(--ink-soft); margin-bottom: 24px; font-size: 16px; }
+  .task-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .task-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; color: var(--ink-soft); }
+  .task-list li::before {
+    content: ''; flex-shrink: 0; width: 18px; height: 1px;
+    background: var(--accent); margin-top: 11px;
+  }
+  @media (max-width: 860px) {
+    .tasks { grid-template-columns: 1fr; }
+    .task, .task + .task { padding: 36px 0; border-left: none; padding-left: 0; }
+  }
+
+  /* ================= КАК РАБОТАЕТ ================= */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--line); }
+  .step { padding: 36px 28px 36px 0; border-bottom: 1px solid var(--line); position: relative; }
+  .step + .step { border-left: 1px solid var(--line); padding-left: 28px; }
+  .step-n {
+    font-family: var(--serif); font-style: italic; font-size: 30px;
+    color: var(--accent); margin-bottom: 18px; display: block;
+  }
+  .step h4 { font-size: 18px; margin-bottom: 10px; }
+  .step p { font-size: 14.5px; color: var(--ink-muted); }
+  @media (max-width: 860px) {
+    .steps { grid-template-columns: 1fr 1fr; }
+    .step:nth-child(3) { border-left: none; padding-left: 0; }
+  }
+  @media (max-width: 560px) {
+    .steps { grid-template-columns: 1fr; }
+    .step, .step + .step { padding: 28px 0; border-left: none; padding-left: 0; }
+  }
+
+  /* ================= СЛАЙСЕРЫ ================= */
+  .slicer-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+  .slicer-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line); }
+  .slicer-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 4px; border-bottom: 1px solid var(--line);
+    cursor: pointer; transition: padding 0.2s, background 0.2s;
+  }
+  .slicer-item:hover { padding-left: 14px; }
+  .slicer-item .sname { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .slicer-item .sname em { font-family: var(--serif); font-weight: 400; color: var(--ink-muted); }
+  .slicer-item .sarrow { color: var(--accent); transition: transform 0.2s; }
+  .slicer-item:hover .sarrow { transform: translateX(4px); }
+
+  .config-card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+    padding: 28px; font-family: var(--mono); font-size: 13px;
+    box-shadow: 0 20px 50px -30px rgba(0,0,0,0.25);
+  }
+  .config-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px dashed var(--line);
+    font-size: 11px; letter-spacing: 0.1em; color: var(--ink-muted); text-transform: uppercase;
+  }
+  .config-head .live { color: var(--accent); display: flex; align-items: center; gap: 6px; }
+  .config-head .live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .config-row { display: flex; justify-content: space-between; padding: 7px 0; color: var(--ink-soft); }
+  .config-row .k { color: var(--ink-muted); }
+  .config-row .v { color: var(--ink); font-weight: 500; }
+  .config-row .v.accent { color: var(--accent); }
+  @media (max-width: 860px) { .slicer-wrap { grid-template-columns: 1fr; gap: 36px; } }
+
+  /* ================= ТЕХНОЛОГИЯ ================= */
+  .tech { background: var(--ink); color: var(--paper); border-radius: 0; padding: 100px 0; }
+  .tech .section-num { color: var(--accent); border-top-color: var(--accent); }
+  .tech .section-title { color: var(--paper); }
+  .tech .section-title .serif { color: rgba(255,255,255,0.5); }
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; margin-top: 56px; }
+  .tech-card { border-top: 1px solid rgba(255,255,255,0.15); padding-top: 24px; }
+  .tech-card h4 { font-size: 18px; margin-bottom: 10px; color: #fff; }
+  .tech-card p { font-size: 14.5px; color: rgba(255,255,255,0.5); }
+  .tech-card .tnum {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    color: var(--accent); margin-bottom: 14px; text-transform: uppercase;
+  }
+  @media (max-width: 860px) { .tech-grid { grid-template-columns: 1fr; gap: 24px; } }
+
+  /* ================= CTA ================= */
+  .cta-section { background: var(--bg); padding: 110px 0; text-align: center; }
+  .cta-section h2 {
+    font-size: clamp(38px, 6vw, 88px); line-height: 0.98; margin-bottom: 28px;
+    letter-spacing: -0.04em;
+  }
+  .cta-section h2 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: var(--accent); }
+  .cta-section p { color: var(--ink-soft); font-size: 18px; max-width: 480px; margin: 0 auto 40px; }
+  .cta-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: var(--ink); color: var(--paper); text-decoration: none;
+    padding: 18px 34px; border-radius: 100px; font-weight: 600; font-size: 16px;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .cta-btn:hover { transform: translateY(-2px); background: var(--accent); }
+  .cta-note {
+    margin-top: 22px; font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase;
+  }
+
+  /* ================= FOOTER ================= */
+  footer { background: var(--bg); border-top: 1px solid var(--line); padding: 56px 0 40px; }
+  .foot-top { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 56px; }
+  .foot-brand .brand-mark { font-size: 30px; margin-bottom: 12px; }
+  .foot-brand p { font-size: 14px; color: var(--ink-muted); max-width: 280px; line-height: 1.6; }
+  .foot-col h6 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-muted); margin-bottom: 16px;
+  }
+  .foot-col a { display: block; color: var(--ink-soft); text-decoration: none; font-size: 15px; margin-bottom: 10px; transition: color 0.2s; }
+  .foot-col a:hover { color: var(--accent); }
+  .foot-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 28px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-muted); flex-wrap: wrap; gap: 16px;
+  }
+  .foot-bottom .mono { font-size: 11px; }
+  @media (max-width: 860px) { .foot-top { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .foot-top { grid-template-columns: 1fr; gap: 28px; } }
+
+  /* ================= АНИМАЦИИ ================= */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s cubic-bezier(.2,.6,.2,1), transform 0.7s cubic-bezier(.2,.6,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .marquee-track { animation: none; }
+    .hero-eyebrow .dot { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <div class="brand-mark">3D<span>·</span>Помощник</div>
+      <div class="brand-sub">beta</div>
+    </div>
+    <nav class="nav-links">
+      <a href="#tasks">Задачи</a>
+      <a href="#steps">Как работает</a>
+      <a href="#slicers">Слайсеры</a>
+      <a href="#tech">Технология</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="#" class="nav-login">Войти</a>
+      <a href="#app" class="nav-cta">
+        Открыть сервис
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ================= HERO + APP ================= -->
+<section class="hero" style="padding-bottom: 0;">
+  <div class="wrap">
+    <div class="hero-eyebrow-row">
+      <div class="hero-eyebrow">
+        <span class="dot"></span>
+        Онлайн-сервис · работает в браузере
+      </div>
+      <div class="hero-modelnet">
+        Модель: <b>ModelNet-3D</b> · точность 94.2%
+      </div>
     </div>
 
-    <script>
-      const fileInput = document.getElementById('model-input');
-      const selectedFile = document.getElementById('selected-file');
-      const analyzeButton = document.getElementById('analyze-btn');
-      const predictedClass = document.getElementById('predicted-class');
-      const resultGrid = document.getElementById('result-grid');
-      const resultTag = document.getElementById('result-tag');
-      const viewer = document.getElementById('viewer');
-      const previewEmpty = document.getElementById('preview-empty');
+    <h1 class="hero-title">
+      <span class="row">Загрузите</span>
+      <span class="row"><span class="accent-word">модель</span></span>
+      <span class="row outline">получите ответ</span>
+    </h1>
 
-      const fallbackModelData = {
-        chair: {
-          title: 'Chair',
-          summary: 'The model looks like a chair with a seating area and support structure.',
-          blocks: [
-            { title: 'Shape analysis', text: 'The geometry shows a stable base and a seat plane, which is typical for a chair.' },
-            { title: 'Recommended print settings', text: 'Use 0.2 mm layer height, 15% infill, and add supports only if the backrest has large overhangs.' },
-            { title: 'Usage note', text: 'Chair models are common in furniture design, office scenes, and household asset libraries.' }
-          ]
-        },
-        table: {
-          title: 'Table',
-          summary: 'The object has broad supports and a flat top, which matches a table form.',
-          blocks: [
-            { title: 'Shape analysis', text: 'The design suggests a flat platform and upright legs or columns.' },
-            { title: 'Recommended print settings', text: 'A 0.16-0.2 mm layer height and moderate infill are usually enough for a rigid table structure.' },
-            { title: 'Usage note', text: 'This category is common for room furniture and product mockups.' }
-          ]
-        },
-        airplane: {
-          title: 'Airplane',
-          summary: 'This model has elongated wings and a nose, consistent with an airplane silhouette.',
-          blocks: [
-            { title: 'Shape analysis', text: 'The body looks tapered and symmetrical, with a pointed front and wing-like extensions.' },
-            { title: 'Recommended print settings', text: 'Keep walls thin and use low to medium infill for a lightweight result. Add supports for wings and stabilizers.' },
-            { title: 'Usage note', text: 'Airplane models are often used for toy prototypes, aviation visualizations, and educational assets.' }
-          ]
-        },
-        sofa: {
-          title: 'Sofa',
-          summary: 'The model appears to have a broad seat and backrest, which is typical for a sofa or couch.',
-          blocks: [
-            { title: 'Shape analysis', text: 'A larger back and seat construction indicates sofa-like geometry.' },
-            { title: 'Recommended print settings', text: 'Use moderate infill and strong wall settings; large flat faces print cleanly.' },
-            { title: 'Usage note', text: 'This form is common in interior design and room scene generation.' }
-          ]
-        },
-        toilet: {
-          title: 'Toilet',
-          summary: 'The object has a rounded bowl and a vertical tank design, matching a toilet form.',
-          blocks: [
-            { title: 'Shape analysis', text: 'The structure includes a bowl-shaped base and a vertical tank element.' },
-            { title: 'Recommended print settings', text: 'Print with good layer adhesion and use supports for overhangs around the tank and seat.' },
-            { title: 'Usage note', text: 'Suitable for bathroom furniture and interior 3D collections.' }
-          ]
-        }
-      };
+    <!-- ============ РАБОЧИЙ ИНТЕРФЕЙС ============ -->
+    <div class="app" id="app">
+      <!-- левая: загрузка -->
+      <div class="app-upload">
+        <div class="app-tabs">
+          <button class="app-tab active" data-tab="sort">Сортировка</button>
+          <button class="app-tab" data-tab="print">Настройки печати</button>
+        </div>
 
-      function normalizeClassName(value) {
-        return String(value || '')
-          .trim()
-          .toLowerCase()
-          .replace(/[_-]+/g, ' ')
-          .replace(/\s+/g, ' ');
+        <div class="dropzone" id="dropzone">
+          <div class="dz-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L7 9m5-5l5 5M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          </div>
+          <h4>Перетащите 3D-модель</h4>
+          <p>или нажмите, чтобы выбрать файл</p>
+          <div class="formats">
+            <span>STL</span><span>OBJ</span><span>3MF</span><span>FBX</span>
+          </div>
+        </div>
+
+        <div class="app-options">
+          <div class="opt-row">
+            <label><input type="checkbox" checked> Автосортировка по классам</label>
+          </div>
+          <div class="opt-row">
+            <label><input type="checkbox" checked> Подобрать настройки печати</label>
+          </div>
+          <div class="opt-row">
+            <span>Целевой слайсер</span>
+            <div class="custom-select" id="slicerSelect">
+              <button type="button" class="cs-trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="cs-value">Cura</span>
+                <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+              <ul class="cs-menu" role="listbox">
+                <li role="option" data-value="Cura" class="cs-option selected">Cura</li>
+                <li role="option" data-value="PrusaSlicer" class="cs-option">PrusaSlicer</li>
+                <li role="option" data-value="Bambu Studio" class="cs-option">Bambu Studio</li>
+                <li role="option" data-value="OrcaSlicer" class="cs-option">OrcaSlicer</li>
+                <li role="option" data-value="Simplify3D" class="cs-option">Simplify3D</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <button class="app-run" id="runBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 3l14 9-14 9V3z"/></svg>
+          Анализировать модель
+        </button>
+      </div>
+
+      <!-- правая: результат -->
+      <div class="app-result">
+        <div class="result-head">
+          <h5>Результат анализа</h5>
+          <span class="result-status">готово</span>
+        </div>
+
+        <div class="result-file">
+          <div class="result-thumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg>
+          </div>
+          <div>
+            <div class="fname">gear_v3_final.stl</div>
+            <div class="fmeta">STL · 4.2 MB · загружено сейчас</div>
+          </div>
+        </div>
+
+        <div class="result-class">
+          <div class="rc-label">Определённый класс</div>
+          <div class="rc-value">mechanical part</div>
+          <div class="rc-conf">Уверенность: <b>97.4%</b> · топ-3: mechanical, tools, household</div>
+        </div>
+
+        <div class="params">
+          <div class="param"><span class="pk">layer_height</span><span class="pv accent">0.20 mm</span></div>
+          <div class="param"><span class="pk">wall_count</span><span class="pv">3</span></div>
+          <div class="param"><span class="pk">infill</span><span class="pv">25 %</span></div>
+          <div class="param"><span class="pk">supports</span><span class="pv">tree · auto</span></div>
+          <div class="param"><span class="pk">nozzle_temp</span><span class="pv">210 °C</span></div>
+          <div class="param"><span class="pk">speed</span><span class="pv">60 mm/s</span></div>
+        </div>
+
+        <div class="result-actions">
+          <button>Скачать JSON</button>
+          <button class="primary">Отправить в слайсер</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ЛЕНТА ================= -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>ModelNet-3D</span><span>94.2% точность</span><span>STL · OBJ · 3MF · FBX</span>
+    <span>Автосортировка</span><span>JSON-профили</span><span>Cura · PrusaSlicer · Bambu</span>
+    <span>ModelNet-3D</span><span>94.2% точность</span><span>STL · OBJ · 3MF · FBX</span>
+    <span>Автосортировка</span><span>JSON-профили</span><span>Cura · PrusaSlicer · Bambu</span>
+  </div>
+</div>
+
+<!-- ================= ЗАДАЧИ ================= -->
+<section id="tasks">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div><span class="section-num">01 — задачи</span></div>
+      <div>
+        <h2 class="section-title">Две боли — <span class="serif">одно решение</span></h2>
+        <p class="section-sub">
+          Проблемы, с которыми сталкивается каждый, кто делает и печатает 3D-модели.
+        </p>
+      </div>
+    </div>
+
+    <div class="tasks">
+      <div class="task reveal">
+        <div class="task-tag"><span class="idx">1</span> сортировка</div>
+        <h3>«Как я назвал эту <em>модель</em>?»</h3>
+        <p>
+          Загружаете папку или архив с моделями — сервис классифицирует каждую
+          и раскладывает по папкам с понятными именами классов. Всё в облаке.
+        </p>
+        <ul class="task-list">
+          <li>Загрузка папки или ZIP-архива</li>
+          <li>Классификация на основе ModelNet-3D</li>
+          <li>Скачивание отсортированной структуры</li>
+          <li>Фоновая обработка на сервере</li>
+        </ul>
+      </div>
+      <div class="task reveal">
+        <div class="task-tag"><span class="idx">2</span> печать</div>
+        <h3>«Какие <em>настройки</em> выставить?»</h3>
+        <p>
+          Загружаете модель — ИИ определяет класс и выдаёт оптимальные параметры
+          для слайсера. Скачиваете JSON или отправляете напрямую.
+        </p>
+        <ul class="task-list">
+          <li>Классификация загруженной модели</li>
+          <li>Рекомендации по слою, заполнению, поддержкам</li>
+          <li>JSON для 5 популярных слайсеров</li>
+          <li>Пакетная обработка нескольких моделей</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= КАК РАБОТАЕТ ================= -->
+<section id="steps">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div><span class="section-num">02 — как работает</span></div>
+      <div>
+        <h2 class="section-title">От файла <span class="serif">до результата</span></h2>
+        <p class="section-sub">Четыре шага — и всё в браузере, без установки.</p>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step reveal">
+        <span class="step-n">01.</span>
+        <h4>Загрузка</h4>
+        <p>Перетаскиваете 3D-модель или папку в окно браузера.</p>
+      </div>
+      <div class="step reveal">
+        <span class="step-n">02.</span>
+        <h4>Анализ</h4>
+        <p>Нейросеть ModelNet-3D обрабатывает геометрию модели на сервере.</p>
+      </div>
+      <div class="step reveal">
+        <span class="step-n">03.</span>
+        <h4>Классификация</h4>
+        <p>Определяется класс, уверенность и топ-3 альтернативы.</p>
+      </div>
+      <div class="step reveal">
+        <span class="step-n">04.</span>
+        <h4>Результат</h4>
+        <p>Настройки для слайсера, JSON-файл или отсортированный архив.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= СЛАЙСЕРЫ ================= -->
+<section id="slicers">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div><span class="section-num">03 — интеграция</span></div>
+      <div>
+        <h2 class="section-title">Готовые профили <span class="serif">для слайсеров</span></h2>
+        <p class="section-sub">Скачиваете JSON — слайсер подхватывает настройки.</p>
+      </div>
+    </div>
+
+    <div class="slicer-wrap">
+      <div class="slicer-list reveal">
+        <div class="slicer-item"><span class="sname">Cura <em>· Ultimaker</em></span><span class="sarrow">→</span></div>
+        <div class="slicer-item"><span class="sname">PrusaSlicer</span><span class="sarrow">→</span></div>
+        <div class="slicer-item"><span class="sname">Bambu Studio</span><span class="sarrow">→</span></div>
+        <div class="slicer-item"><span class="sname">OrcaSlicer</span><span class="sarrow">→</span></div>
+        <div class="slicer-item"><span class="sname">Simplify3D</span><span class="sarrow">→</span></div>
+      </div>
+
+      <div class="config-card reveal">
+        <div class="config-head">
+          <span>profile.json</span>
+          <span class="live">generated</span>
+        </div>
+        <div class="config-row"><span class="k">class</span><span class="v accent">mechanical_part</span></div>
+        <div class="config-row"><span class="k">layer_height</span><span class="v">0.20 mm</span></div>
+        <div class="config-row"><span class="k">wall_count</span><span class="v">3</span></div>
+        <div class="config-row"><span class="k">infill</span><span class="v">25 %</span></div>
+        <div class="config-row"><span class="k">supports</span><span class="v">tree · auto</span></div>
+        <div class="config-row"><span class="k">nozzle_temp</span><span class="v">210 °C</span></div>
+        <div class="config-row"><span class="k">bed_temp</span><span class="v">60 °C</span></div>
+        <div class="config-row"><span class="k">speed</span><span class="v">60 mm/s</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ТЕХНОЛОГИЯ ================= -->
+<section class="tech" id="tech">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div><span class="section-num">04 — технология</span></div>
+      <div>
+        <h2 class="section-title">Что под <span class="serif">капотом</span></h2>
+        <p class="section-sub" style="color: rgba(255,255,255,0.5);">
+          Классификатор на основе архитектуры ModelNet, обученный на 40+ классах 3D-объектов.
+        </p>
+      </div>
+    </div>
+
+    <div class="tech-grid">
+      <div class="tech-card reveal">
+        <div class="tnum">01 / модель</div>
+        <h4>ModelNet-3D</h4>
+        <p>Свёрточная сеть для классификации точечных облаков и полигональных сеток. 94.2% точности на валидации.</p>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tnum">02 / форматы</div>
+        <h4>STL · OBJ · 3MF · FBX</h4>
+        <p>Парсинг геометрии в браузере или на сервере. Поддержка бинарных и ASCII-форматов.</p>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tnum">03 / экспорт</div>
+        <h4>JSON-профили</h4>
+        <p>Генерация профилей под 5 слайсеров. Автоматическая подстановка параметров по классу модели.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="cta-section">
+  <div class="wrap">
+    <h2 class="reveal">Попробуйте <em>прямо сейчас</em></h2>
+    <p class="reveal">Загрузите модель — получите класс и настройки печати за несколько секунд. Без регистрации.</p>
+    <a href="#app" class="cta-btn reveal">
+      Открыть сервис
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
+    </a>
+    <div class="cta-note reveal">Бесплатно · без установки · работает в браузере</div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <div class="brand-mark">3D<span>·</span>Помощник</div>
+        <p>Онлайн-нейросеть для 3D-художников и специалистов по 3D-печати. Сортировка моделей и подбор настроек в браузере.</p>
+      </div>
+      <div class="foot-col">
+        <h6>Сервис</h6>
+        <a href="#app">Открыть</a>
+        <a href="#tasks">Задачи</a>
+        <a href="#steps">Как работает</a>
+        <a href="#slicers">Слайсеры</a>
+      </div>
+      <div class="foot-col">
+        <h6>Ресурсы</h6>
+        <a href="#">API</a>
+        <a href="#">Документация</a>
+        <a href="#">ModelNet</a>
+        <a href="#">GitHub</a>
+      </div>
+      <div class="foot-col">
+        <h6>Контакты</h6>
+        <a href="mailto:hi@3dhelper.app">hi@3dhelper.app</a>
+        <a href="#">Telegram</a>
+        <a href="#">Discord</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2025 3D Помощник. Все права защищены.</span>
+      <span class="mono">ModelNet-3D · v1.0 beta</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* ================= Появление при скролле ================= */
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('in'), (i % 4) * 80);
+        io.unobserve(e.target);
       }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-      function getFallbackResult(className) {
-        const key = normalizeClassName(className);
-        if (fallbackModelData[key]) {
-          return fallbackModelData[key];
-        }
+  /* ================= Табы в приложении ================= */
+  document.querySelectorAll('.app-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.app-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
 
-        const lookup = Object.keys(fallbackModelData).find((name) => key.includes(name) || name.includes(key));
-        return fallbackModelData[lookup] || fallbackModelData.chair;
-      }
+  /* ================= Drag & drop ================= */
+  const dz = document.getElementById('dropzone');
+  ['dragenter', 'dragover'].forEach(ev => {
+    dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(ev => {
+    dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); });
+  });
 
-      async function loadClassData() {
-        try {
-          const response = await fetch('./modelnet40.json', { cache: 'no-store' });
-          if (!response.ok) {
-            throw new Error('JSON not loaded');
-          }
-          return await response.json();
-        } catch (error) {
-          console.warn('Using embedded fallback data instead of JSON file.', error);
-          return fallbackModelData;
-        }
-      }
+  function updateFileInfo(file) {
+    if (!file) return;
+    const nameEl = document.querySelector('.result-file .fname');
+    const metaEl = document.querySelector('.result-file .fmeta');
+    const ext = file.name.split('.').pop().toUpperCase();
+    const size = (file.size / 1024 / 1024).toFixed(1);
+    nameEl.textContent = file.name;
+    metaEl.textContent = `${ext} · ${size} MB · только что`;
+  }
 
-      function guessClassFromFile(fileName, classData) {
-        const name = normalizeClassName(fileName.replace(/\.[^/.]+$/, ''));
-        const classNames = Object.keys(classData);
+  dz.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    updateFileInfo(f);
+  });
 
-        const keywordMap = [
-          ['chair', 'chair'],
-          ['table', 'table'],
-          ['desk', 'table'],
-          ['sofa', 'sofa'],
-          ['couch', 'sofa'],
-          ['airplane', 'airplane'],
-          ['plane', 'airplane'],
-          ['toilet', 'toilet'],
-          ['bath', 'toilet'],
-          ['lamp', 'chair'],
-          ['bed', 'chair'],
-          ['monitor', 'chair'],
-          ['vase', 'chair'],
-          ['bottle', 'chair']
-        ];
+  dz.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.stl,.obj,.3mf,.fbx';
+    input.onchange = e => updateFileInfo(e.target.files[0]);
+    input.click();
+  });
 
-        for (const [keyword, predicted] of keywordMap) {
-          if (name.includes(keyword)) {
-            return predicted;
-          }
-        }
+  /* ================= Кнопка «Анализировать» ================= */
+  const runBtn = document.getElementById('runBtn');
+  runBtn.addEventListener('click', () => {
+    const status = document.querySelector('.result-status');
+    status.textContent = 'анализ…';
+    status.style.color = 'var(--accent)';
+    setTimeout(() => {
+      status.textContent = 'готово';
+      status.style.color = 'var(--green)';
+    }, 1400);
+  });
 
-        return classNames[Math.floor(Math.random() * classNames.length)];
-      }
+  /* ================= Клик по слайсеру (секция) ================= */
+  document.querySelectorAll('.slicer-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.slicer-item').forEach(i => i.style.background = '');
+      item.style.background = 'var(--accent-soft)';
+      item.style.borderRadius = '4px';
+    });
+  });
 
-      function renderBlocks(data) {
-        resultGrid.innerHTML = '';
+  /* ================= КАСТОМНЫЙ ДРОПДАУН ================= */
+  (function initCustomSelect() {
+    const root = document.getElementById('slicerSelect');
+    if (!root) return;
 
-        const cards = (data.blocks || []).map((block) => `
-          <article class="info-card">
-            <h3>${block.title}</h3>
-            <p>${block.text}</p>
-          </article>
-        `).join('');
+    const trigger = root.querySelector('.cs-trigger');
+    const valueEl = root.querySelector('.cs-value');
+    const options = root.querySelectorAll('.cs-option');
 
-        resultGrid.innerHTML = cards;
-      }
+    const close = () => {
+      root.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
+    };
+    const open = () => {
+      root.classList.add('open');
+      trigger.setAttribute('aria-expanded', 'true');
+    };
 
-      function showModelPreview(file) {
-        if (!file) {
-          viewer.removeAttribute('src');
-          previewEmpty.style.display = 'flex';
-          return;
-        }
+    // Открытие/закрытие по клику на триггер
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      root.classList.contains('open') ? close() : open();
+    });
 
-        const type = file.name.toLowerCase();
-        if (type.endsWith('.glb') || type.endsWith('.gltf')) {
-          const objectUrl = URL.createObjectURL(file);
-          viewer.setAttribute('src', objectUrl);
-          viewer.style.opacity = '1';
-          previewEmpty.style.display = 'none';
-          return;
-        }
-
-        viewer.setAttribute('src', 'https://modelviewer.dev/shared-assets/models/ShopifyModels/Chair.glb');
-        viewer.style.opacity = '1';
-        previewEmpty.style.display = 'none';
-      }
-
-      fileInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        selectedFile.textContent = file ? file.name : 'No model selected';
+    // Выбор опции
+    options.forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        valueEl.textContent = opt.dataset.value;
+        close();
       });
+    });
 
-      analyzeButton.addEventListener('click', async () => {
-        const file = fileInput.files[0];
-        if (!file) {
-          selectedFile.textContent = 'Please choose a model first';
-          return;
+    // Клик вне — закрыть
+    document.addEventListener('click', (e) => {
+      if (!root.contains(e.target)) close();
+    });
+
+    // Esc — закрыть
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close();
+    });
+
+    // Навигация с клавиатуры
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open();
+        const selected = root.querySelector('.cs-option.selected') || options[0];
+        selected && selected.focus();
+      }
+    });
+
+    options.forEach((opt, idx) => {
+      opt.setAttribute('tabindex', '-1');
+      opt.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          (options[idx + 1] || options[0]).focus();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          (options[idx - 1] || options[options.length - 1]).focus();
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          opt.click();
+          trigger.focus();
+        } else if (e.key === 'Escape') {
+          close();
+          trigger.focus();
         }
-
-        const classData = await loadClassData();
-        const guessedClass = guessClassFromFile(file.name, classData);
-        const found = classData[guessedClass] || getFallbackResult(guessedClass);
-
-        predictedClass.textContent = found.title || guessedClass;
-        resultTag.textContent = `Detected: ${found.title || guessedClass}`;
-        renderBlocks(found);
-        showModelPreview(file);
       });
-    </script>
-  </body>
+    });
+  })();
+</script>
+</body>
 </html>
