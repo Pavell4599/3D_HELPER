@@ -2,7 +2,5 @@
 
 Запуск:
 ```bash
-cd 3D_HELPER
-npm install
-npm run tauri dev
+пока не сделали
 ```
