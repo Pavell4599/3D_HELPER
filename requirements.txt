@@ -1,0 +1,7 @@
+fastapi
+gradio
+numpy
+python-multipart
+torch
+trimesh
+uvicorn
