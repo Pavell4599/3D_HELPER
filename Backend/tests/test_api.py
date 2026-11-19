@@ -1,6 +1,8 @@
+import io
 import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -99,6 +101,29 @@ class BackendApiTests(unittest.TestCase):
             self.assertEqual(response.json()["copied"], 1)
             self.assertTrue(model_file.is_file())
             self.assertTrue((output_directory / "chair" / "sample.stl").is_file())
+
+    def test_uploaded_models_are_returned_in_class_folders_without_name_collisions(self):
+        response = self.client.post("/organize-upload", files=[
+            ("files", ("first/sample.stl", b"first model", "model/stl")),
+            ("files", ("second/sample.stl", b"second model", "model/stl")),
+        ])
+
+        self.assertEqual(response.status_code, 200, response.text)
+        with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+            self.assertEqual(
+                set(archive.namelist()),
+                {"chair/sample.stl", "chair/sample_1.stl"},
+            )
+            self.assertEqual(archive.read("chair/sample.stl"), b"first model")
+            self.assertEqual(archive.read("chair/sample_1.stl"), b"second model")
+
+    def test_uploaded_models_rejects_batches_without_supported_models(self):
+        response = self.client.post(
+            "/organize-upload",
+            files=[("files", ("notes.txt", b"not a model", "text/plain"))],
+        )
+
+        self.assertEqual(response.status_code, 422)
 
     def test_in_place_organization_can_be_undone(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

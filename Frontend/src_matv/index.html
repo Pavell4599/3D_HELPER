@@ -286,6 +286,19 @@
   }
   .app-run:hover { transform: translateY(-2px); background: #f96332; }
   .app-run svg { width: 16px; height: 16px; }
+  .batch-sort {
+    margin-top: 24px; padding-top: 22px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .batch-sort p { color: rgba(255,255,255,0.55); font-size: 13px; margin-bottom: 12px; }
+  .batch-sort button {
+    width: 100%; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    font-family: var(--sans); cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
+    background: transparent; color: rgba(255,255,255,0.9); transition: all 0.2s;
+  }
+  .batch-sort button:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+  .batch-sort button:disabled { cursor: not-allowed; opacity: 0.45; }
+  .batch-sort-status { display: block; min-height: 20px; margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.55); }
 
   .app-result {
     padding: 40px 36px;
@@ -574,7 +587,6 @@
       <a href="#tech">Технология</a>
     </nav>
     <div class="nav-actions">
-      <a href="#" class="nav-login">Войти</a>
       <a href="#app" class="nav-cta">
         Открыть сервис
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
@@ -606,11 +618,6 @@
     <div class="app" id="app">
       <!-- левая: загрузка -->
       <div class="app-upload">
-        <div class="app-tabs">
-          <button class="app-tab active" data-tab="sort">Сортировка</button>
-          <button class="app-tab" data-tab="print">Настройки печати</button>
-        </div>
-
         <div class="dropzone" id="dropzone">
           <div class="dz-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L7 9m5-5l5 5M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
@@ -618,41 +625,22 @@
           <h4>Перетащите 3D-модель</h4>
           <p>или нажмите, чтобы выбрать файл</p>
           <div class="formats">
-            <span>STL</span><span>OBJ</span><span>3MF</span><span>FBX</span>
+            <span>STL</span><span>OBJ</span><span>PLY</span><span>OFF</span>
           </div>
-        </div>
-
-        <div class="app-options">
-          <div class="opt-row">
-            <label><input type="checkbox" checked> Автосортировка по классам</label>
-          </div>
-          <div class="opt-row">
-            <label><input type="checkbox" checked> Подобрать настройки печати</label>
-          </div>
-          <div class="opt-row">
-            <span>Целевой слайсер</span>
-            <div class="custom-select" id="slicerSelect">
-              <button type="button" class="cs-trigger" aria-haspopup="listbox" aria-expanded="false">
-                <span class="cs-value">Cura</span>
-                <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-              </button>
-              <ul class="cs-menu" role="listbox">
-                <li role="option" data-value="Cura" class="cs-option selected">Cura</li>
-                <li role="option" data-value="PrusaSlicer" class="cs-option">PrusaSlicer</li>
-                <li role="option" data-value="Bambu Studio" class="cs-option">Bambu Studio</li>
-                <li role="option" data-value="OrcaSlicer" class="cs-option">OrcaSlicer</li>
-                <li role="option" data-value="Simplify3D" class="cs-option">Simplify3D</li>
-              </ul>
-            </div>
-          </div>
+          <input type="file" id="modelFile" accept=".stl,.obj,.ply,.off,.gltf,.glb,.dae,.3mf,.fbx,.xyz,.pcd,.msh,.gmsh,.vrml,.amf,.x3d" hidden>
         </div>
 
         <button class="app-run" id="runBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 3l14 9-14 9V3z"/></svg>
           Анализировать модель
         </button>
+        <div class="batch-sort">
+          <p>Или выберите папку с моделями — полученные копии будут разложены по классам в ZIP-архиве.</p>
+          <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+          <button type="button" id="chooseFolderBtn">Выбрать папку с моделями</button>
+          <button type="button" id="sortFolderBtn" disabled>Сортировать и скачать ZIP</button>
+          <span class="batch-sort-status" id="batchSortStatus" aria-live="polite"></span>
+        </div>
       </div>
 
       <!-- правая: результат -->
@@ -667,29 +655,26 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg>
           </div>
           <div>
-            <div class="fname">gear_v3_final.stl</div>
-            <div class="fmeta">STL · 4.2 MB · загружено сейчас</div>
+            <div class="fname">Файл не выбран</div>
+            <div class="fmeta">Выберите 3D-модель для анализа</div>
           </div>
         </div>
 
         <div class="result-class">
           <div class="rc-label">Определённый класс</div>
-          <div class="rc-value">mechanical part</div>
-          <div class="rc-conf">Уверенность: <b>97.4%</b> · топ-3: mechanical, tools, household</div>
+          <div class="rc-value">Ожидание файла</div>
+          <div class="rc-conf">Уверенность: <b>—</b></div>
         </div>
 
         <div class="params">
-          <div class="param"><span class="pk">layer_height</span><span class="pv accent">0.20 mm</span></div>
-          <div class="param"><span class="pk">wall_count</span><span class="pv">3</span></div>
-          <div class="param"><span class="pk">infill</span><span class="pv">25 %</span></div>
-          <div class="param"><span class="pk">supports</span><span class="pv">tree · auto</span></div>
-          <div class="param"><span class="pk">nozzle_temp</span><span class="pv">210 °C</span></div>
-          <div class="param"><span class="pk">speed</span><span class="pv">60 mm/s</span></div>
+          <div class="param"><span class="pk">Высота слоя</span><span class="pv accent">—</span></div>
+          <div class="param"><span class="pk">Заполнение</span><span class="pv">—</span></div>
+          <div class="param"><span class="pk">Поддержки</span><span class="pv">—</span></div>
+          <div class="param"><span class="pk">Температура сопла</span><span class="pv">—</span></div>
         </div>
 
         <div class="result-actions">
-          <button>Скачать JSON</button>
-          <button class="primary">Отправить в слайсер</button>
+          <button id="downloadJson" disabled>Скачать JSON</button>
         </div>
       </div>
     </div>
@@ -724,14 +709,14 @@
         <div class="task-tag"><span class="idx">1</span> сортировка</div>
         <h3>«Как я назвал эту <em>модель</em>?»</h3>
         <p>
-          Загружаете папку или архив с моделями — сервис классифицирует каждую
-          и раскладывает по папкам с понятными именами классов. Всё в облаке.
+          Выбираете папку с моделями — сервис классифицирует файлы и скачивает
+          архив с копиями, разложенными по папкам классов.
         </p>
         <ul class="task-list">
-          <li>Загрузка папки или ZIP-архива</li>
-          <li>Классификация на основе ModelNet-3D</li>
-          <li>Скачивание отсортированной структуры</li>
-          <li>Фоновая обработка на сервере</li>
+          <li>Выбор папки с 3D-моделями</li>
+          <li>Классификация на основе ModelNet40</li>
+          <li>Скачивание ZIP с подпапками классов</li>
+          <li>Исходные файлы остаются без изменений</li>
         </ul>
       </div>
       <div class="task reveal">
@@ -920,16 +905,12 @@
   }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-  /* ================= Табы в приложении ================= */
-  document.querySelectorAll('.app-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.app-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-
   /* ================= Drag & drop ================= */
   const dz = document.getElementById('dropzone');
+  const fileInput = document.getElementById('modelFile');
+  let selectedFile = null;
+  let lastAnalysis = null;
+
   ['dragenter', 'dragover'].forEach(ev => {
     dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); });
   });
@@ -949,27 +930,134 @@
 
   dz.addEventListener('drop', e => {
     const f = e.dataTransfer.files[0];
+    selectedFile = f;
     updateFileInfo(f);
   });
 
   dz.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.stl,.obj,.3mf,.fbx';
-    input.onchange = e => updateFileInfo(e.target.files[0]);
-    input.click();
+    fileInput.click();
+  });
+  fileInput.addEventListener('click', e => e.stopPropagation());
+  fileInput.addEventListener('change', e => {
+    selectedFile = e.target.files[0] || null;
+    updateFileInfo(selectedFile);
   });
 
   /* ================= Кнопка «Анализировать» ================= */
   const runBtn = document.getElementById('runBtn');
-  runBtn.addEventListener('click', () => {
+  runBtn.addEventListener('click', async () => {
+    if (!selectedFile) {
+      document.querySelector('.result-status').textContent = 'выберите файл';
+      document.querySelector('.result-status').style.color = 'var(--accent)';
+      return;
+    }
     const status = document.querySelector('.result-status');
     status.textContent = 'анализ…';
     status.style.color = 'var(--accent)';
-    setTimeout(() => {
+    runBtn.disabled = true;
+
+    try {
+      const form = new FormData();
+      form.append('file', selectedFile);
+      const response = await fetch('http://127.0.0.1:8000/analyze-model', {
+        method: 'POST',
+        body: form
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Не удалось выполнить анализ');
+      }
+      lastAnalysis = await response.json();
+      const confidence = Math.round(lastAnalysis.confidence * 1000) / 10;
+      document.querySelector('.rc-value').textContent = lastAnalysis.settings.class_name_ru || lastAnalysis.class;
+      document.querySelector('.rc-conf').innerHTML =
+        `Уверенность: <b>${confidence}%</b> · топ-3: ` +
+        lastAnalysis.top_predictions.map(p => p.class_name_ru || p.class).join(', ');
+      const settings = lastAnalysis.settings;
+      const params = document.querySelectorAll('.params .param');
+      params[0].querySelector('.pv').textContent = settings['Высота слоя'] || '—';
+      params[1].querySelector('.pv').textContent = settings['Заполнение'] || '—';
+      params[2].querySelector('.pv').textContent = settings['Поддержки'] || '—';
+      params[3].querySelector('.pv').textContent = settings['Температура сопла'] || '—';
+      document.getElementById('downloadJson').disabled = false;
       status.textContent = 'готово';
       status.style.color = 'var(--green)';
-    }, 1400);
+    } catch (error) {
+      status.textContent = 'ошибка';
+      status.style.color = 'var(--accent)';
+      document.querySelector('.rc-value').textContent = error.message;
+    } finally {
+      runBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('downloadJson').addEventListener('click', () => {
+    if (!lastAnalysis) return;
+    const blob = new Blob([JSON.stringify(lastAnalysis, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${selectedFile.name}.analysis.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+
+  const folderInput = document.getElementById('folderInput');
+  const chooseFolderBtn = document.getElementById('chooseFolderBtn');
+  const sortFolderBtn = document.getElementById('sortFolderBtn');
+  const batchSortStatus = document.getElementById('batchSortStatus');
+  const supportedExtensions = new Set([
+    'off', 'obj', 'stl', 'ply', 'glb', 'gltf', 'fbx', 'dae', '3ds',
+    'x3d', '3mf', 'wrl', 'xyz', 'pcd', 'msh', 'gmsh', 'vrml', 'amf'
+  ]);
+  let folderModels = [];
+
+  chooseFolderBtn.addEventListener('click', () => folderInput.click());
+  folderInput.addEventListener('change', () => {
+    folderModels = Array.from(folderInput.files).filter(file => {
+      const extension = file.name.split('.').pop().toLowerCase();
+      return supportedExtensions.has(extension);
+    });
+    sortFolderBtn.disabled = folderModels.length === 0;
+    batchSortStatus.textContent = folderModels.length
+      ? `Найдено моделей: ${folderModels.length}`
+      : 'В папке не найдено поддерживаемых 3D-моделей.';
+  });
+
+  sortFolderBtn.addEventListener('click', async () => {
+    if (!folderModels.length) return;
+    sortFolderBtn.disabled = true;
+    chooseFolderBtn.disabled = true;
+    batchSortStatus.textContent = `Сортировка ${folderModels.length} моделей…`;
+
+    try {
+      const form = new FormData();
+      folderModels.forEach(file => {
+        form.append('files', file, file.webkitRelativePath || file.name);
+      });
+      const response = await fetch('http://127.0.0.1:8000/organize-upload', {
+        method: 'POST',
+        body: form
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Не удалось отсортировать модели');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = '3d-helper-sorted.zip';
+      link.click();
+      URL.revokeObjectURL(url);
+      batchSortStatus.textContent = 'Готово: ZIP-архив скачан. Исходные файлы не изменены.';
+    } catch (error) {
+      batchSortStatus.textContent = `Ошибка: ${error.message}`;
+    } finally {
+      sortFolderBtn.disabled = folderModels.length === 0;
+      chooseFolderBtn.disabled = false;
+    }
   });
 
   /* ================= Клик по слайсеру (секция) ================= */

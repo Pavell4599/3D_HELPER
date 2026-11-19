@@ -1,0 +1,11 @@
+Датасеты:
+pointnet 10
+pointnet 40
+ShapeNetCore 55
+ABC dataset
+
+Архитектуры обучения:
+Pointnet
+Pointnet ++
+PointCNN
+MVCNN
