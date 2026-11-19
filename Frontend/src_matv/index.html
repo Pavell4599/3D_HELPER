@@ -958,7 +958,7 @@
     try {
       const form = new FormData();
       form.append('file', selectedFile);
-      const response = await fetch('http://127.0.0.1:8000/analyze-model', {
+      const response = await fetch('http://127.0.0.1:8001/analyze-model', {
         method: 'POST',
         body: form
       });
@@ -1034,7 +1034,7 @@
       folderModels.forEach(file => {
         form.append('files', file, file.webkitRelativePath || file.name);
       });
-      const response = await fetch('http://127.0.0.1:8000/organize-upload', {
+      const response = await fetch('http://127.0.0.1:8001/organize-upload', {
         method: 'POST',
         body: form
       });
