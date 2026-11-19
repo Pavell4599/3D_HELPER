@@ -4,6 +4,7 @@ import shutil
 import sys
 import tempfile
 import uuid
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,8 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from starlette.background import BackgroundTask
+from starlette.responses import FileResponse
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 AI_ROOT = PROJECT_ROOT / "Backend" / "Ai"
@@ -32,6 +35,8 @@ WEIGHTS_PATH = Path(os.environ.get(
 )).expanduser()
 SETTINGS_PATH = PROJECT_ROOT / "Data" / "settings" / "modelnet40.json"
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+MAX_BATCH_FILES = 100
+MAX_BATCH_UPLOAD_BYTES = 500 * 1024 * 1024
 
 _classifier: PointNetClassifier | None = None
 
@@ -50,7 +55,9 @@ cors_origins = [
     for origin in os.environ.get(
         "CORS_ORIGINS",
         "http://localhost:3000,http://127.0.0.1:3000,"
-        "http://localhost:5173,http://127.0.0.1:5173",
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:5500,http://127.0.0.1:5500,"
+        "http://localhost:8080,http://127.0.0.1:8080",
     ).split(",")
     if origin.strip()
 ]
@@ -589,3 +596,97 @@ async def analyze_model(file: UploadFile = File(...)) -> dict[str, Any]:
                 temporary_path.unlink()
             except FileNotFoundError:
                 pass
+
+
+@app.post("/organize-upload")
+async def organize_uploaded_models(files: list[UploadFile] = File(...)) -> FileResponse:
+    if len(files) > MAX_BATCH_FILES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"За один раз можно отсортировать не более {MAX_BATCH_FILES} файлов.",
+        )
+
+    temporary_directory = Path(tempfile.mkdtemp(prefix="3d-helper-sort-"))
+    archive_path = temporary_directory / "sorted_models.zip"
+    total_bytes = 0
+    archived_files = 0
+    errors: list[str] = []
+    used_archive_names: set[str] = set()
+    response_ready = False
+
+    try:
+        with zipfile.ZipFile(
+            archive_path, mode="w", compression=zipfile.ZIP_DEFLATED
+        ) as archive:
+            for upload in files:
+                file_name = (upload.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+                suffix = Path(file_name).suffix.lower()
+                if suffix not in SUPPORTED_FORMATS:
+                    continue
+
+                temporary_model = temporary_directory / f"{uuid.uuid4()}{suffix}"
+                file_bytes = 0
+                with temporary_model.open("wb") as model_file:
+                    while True:
+                        chunk = await upload.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        file_bytes += len(chunk)
+                        total_bytes += len(chunk)
+                        if file_bytes > MAX_UPLOAD_BYTES:
+                            raise HTTPException(
+                                status_code=413,
+                                detail=f"Файл {file_name} превышает ограничение 100 МБ.",
+                            )
+                        if total_bytes > MAX_BATCH_UPLOAD_BYTES:
+                            raise HTTPException(
+                                status_code=413,
+                                detail="Общий размер файлов превышает ограничение 500 МБ.",
+                            )
+                        model_file.write(chunk)
+
+                result = await run_in_threadpool(classify_path, temporary_model)
+                if "error" in result:
+                    errors.append(f"{file_name}: {result['error']}")
+                    temporary_model.unlink()
+                    continue
+
+                class_name = result["class"]
+                archive_name = f"{class_name}/{file_name}"
+                stem = Path(file_name).stem
+                index = 1
+                while archive_name.casefold() in used_archive_names:
+                    archive_name = f"{class_name}/{stem}_{index}{suffix}"
+                    index += 1
+                used_archive_names.add(archive_name.casefold())
+                archive.write(temporary_model, archive_name)
+                temporary_model.unlink()
+                archived_files += 1
+
+            if archived_files == 0:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Не удалось классифицировать ни одной модели из выбранной папки.",
+                )
+            if errors:
+                archive.writestr("_errors.txt", "\n".join(errors))
+
+        response = FileResponse(
+            path=archive_path,
+            media_type="application/zip",
+            filename="3d-helper-sorted.zip",
+            background=BackgroundTask(
+                shutil.rmtree, temporary_directory, ignore_errors=True
+            ),
+        )
+        response_ready = True
+        return response
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Не удалось создать архив: {exc}"
+        ) from exc
+    finally:
+        for upload in files:
+            await upload.close()
+        if not response_ready:
+            shutil.rmtree(temporary_directory, ignore_errors=True)
