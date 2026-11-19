@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Помощник — сортировка моделей</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ... (стили остаются точно такими же, как в предыдущем ответе) ... */
+  :root { --bg: #f4f1ea; --paper: #fbf9f4; --ink: #111110; --ink-soft: #4a4843; --ink-muted: #8a877e; --line: #d8d3c7; --accent: #e8541e; --accent-soft: #f7e4db; --green: #2f7d4f; --serif: 'Instrument Serif', Georgia, serif; --sans: 'Inter Tight', -apple-system, sans-serif; --mono: 'JetBrains Mono', monospace; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+  header { position: sticky; top: 0; z-index: 100; background: rgba(244, 241, 234, 0.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
+  .brand-mark { font-family: var(--serif); font-size: 26px; font-style: italic; }
+  .brand-mark span { color: var(--accent); }
+  .hero { padding: 72px 0 0; }
+  .hero-title { font-size: clamp(48px, 8.6vw, 132px); letter-spacing: -0.045em; line-height: 0.9; margin-bottom: 44px; }
+  .accent-word { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+  .outline { -webkit-text-stroke: 1.5px var(--ink); color: transparent; }
+  .app { background: var(--ink); color: var(--paper); border-radius: 6px; overflow: hidden; display: grid; grid-template-columns: 1fr 1.15fr; box-shadow: 0 40px 100px -50px rgba(0,0,0,0.5); }
+  .app-upload { padding: 40px 36px; border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; }
+  .dropzone { border: 1.5px dashed rgba(255,255,255,0.2); border-radius: 10px; padding: 44px 24px; text-align: center; cursor: pointer; transition: all 0.25s; background: rgba(255,255,255,0.02); margin-bottom: 24px; }
+  .dropzone:hover { border-color: var(--accent); background: rgba(232,84,30,0.08); }
+  .app-run { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--accent); color: #fff; border: none; padding: 15px 28px; border-radius: 100px; font-weight: 700; cursor: pointer; }
+  .app-run:disabled { opacity: 0.6; cursor: not-allowed; }
+  .app-result { padding: 40px 36px; background: rgba(255,255,255,0.015); display: flex; flex-direction: column; }
+  .result-status { font-family: var(--mono); font-size: 11px; text-transform: uppercase; }
+  .params { display: flex; flex-direction: column; gap: 0; }
+  .param { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: var(--mono); font-size: 12px; }
+  @media (max-width: 900px) { .app { grid-template-columns: 1fr; } .app-upload { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand-mark">3D<span>·</span>Помощник</div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <h1 class="hero-title">
+      <span class="row">Загрузите</span>
+      <span class="row"><span class="accent-word">модель</span></span>
+      <span class="row outline">получите ответ</span>
+    </h1>
+
+    <div class="app" id="app">
+      <div class="app-upload">
+        <div class="dropzone" id="dropzone">
+          <div style="font-size:40px;margin-bottom:10px;">📦</div>
+          <h4>Перетащите 3D-модель</h4>
+          <p style="color:rgba(255,255,255,0.5);font-size:13px;">STL · OBJ · FBX · 3MF</p>
+        </div>
+        <input type="file" id="fileInput" accept=".stl,.obj,.fbx,.3mf" style="display:none;">
+        
+        <div id="statusLog" style="margin-top:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.5);line-height:1.6;"></div>
+
+        <button class="app-run" id="runBtn" disabled style="margin-top:20px;">
+          Анализировать модель
+        </button>
+      </div>
+
+      <div class="app-result">
+        <div style="display:flex;justify-content:space-between;margin-bottom:22px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:18px;">
+          <h5 style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);">РЕЗУЛЬТАТ</h5>
+          <span class="result-status" id="resultStatus" style="color:var(--green);">ожидание</span>
+        </div>
+        <div style="margin-bottom:26px;">
+          <div id="fileName" style="font-size:15px;font-weight:600;">—</div>
+          <div id="fileMeta" style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.4);">файл не выбран</div>
+        </div>
+        <div style="background:rgba(232,84,30,0.1);border:1px solid rgba(232,84,30,0.25);border-radius:10px;padding:18px;margin-bottom:26px;">
+          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.4);">КЛАСС</div>
+          <div id="classValue" style="font-family:var(--serif);font-style:italic;font-size:28px;color:var(--accent);">—</div>
+          <div style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.45);">Уверенность: <b id="confValue" style="color:var(--green);">—</b></div>
+        </div>
+        <div class="params" id="topkParams"></div>
+        <div style="display:flex;gap:10px;margin-top:24px;padding-top:22px;border-top:1px solid rgba(255,255,255,0.08);">
+          <button id="sortBtn" style="flex:1;padding:12px;border-radius:8px;font-weight:600;cursor:pointer;background:var(--accent);border:none;color:#fff;">Разложить по папкам</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= БИБЛИОТЕКИ (IMPORT MAPS) ================= -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
+
+<script type="module">
+/* ============================================================
+   ИМПОРТЫ THREE.JS (все форматы)
+   ============================================================ */
+import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
+
+/* ============================================================
+   КОНСТАНТЫ
+   ============================================================ */
+const MODEL_URL = './best_pointnet_modelnet40.onnx';
+const NUM_POINTS = 1024;
+const CLASSES = ['airplane', 'bathtub', 'bed', 'bench', 'bookshelf', 'bottle', 'bowl', 'car',
+  'chair', 'cone', 'cup', 'curtain', 'desk', 'door', 'dresser', 'flower_pot',
+  'glass_box', 'guitar', 'keyboard', 'lamp', 'laptop', 'mantel', 'monitor',
+  'night_stand', 'person', 'piano', 'plant', 'radio', 'range_hood', 'sink',
+  'sofa', 'stairs', 'stool', 'table', 'tent', 'toilet', 'tv_stand', 'vase',
+  'wardrobe', 'xbox'];
+
+let selectedFile = null;
+let onnxSession = null;
+let lastResult = null;
+
+/* ============================================================
+   UI-ХЕЛПЕРЫ
+   ============================================================ */
+const $ = (s) => document.querySelector(s);
+const log = (msg) => { $('#statusLog').innerHTML += '› ' + msg + '<br>'; };
+const setStatus = (text, color) => { const el = $('#resultStatus'); el.textContent = text; el.style.color = color || 'var(--green)'; };
+
+/* ============================================================
+   DRAG & DROP
+   ============================================================ */
+const dz = $('#dropzone');
+['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+dz.addEventListener('click', () => $('#fileInput').click());
+dz.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) setFile(f); });
+$('#fileInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) setFile(f); });
+
+function setFile(file) {
+  selectedFile = file;
+  const ext = file.name.split('.').pop().toUpperCase();
+  const size = (file.size / 1024 / 1024).toFixed(2);
+  $('#fileName').textContent = file.name;
+  $('#fileMeta').textContent = `${ext} · ${size} MB`;
+  $('#runBtn').disabled = false;
+  log(`Файл выбран: ${file.name} (${ext})`);
+}
+
+/* ============================================================
+   ЗАГРУЗКА ONNX
+   ============================================================ */
+async function loadModel() {
+  if (onnxSession) return onnxSession;
+  log('Загрузка ONNX-модели…');
+  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/';
+  onnxSession = await ort.InferenceSession.create(MODEL_URL, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
+  log('Модель загружена ✓');
+  return onnxSession;
+}
+
+/* ============================================================
+   ПАРСИНГ ВСЕХ ФОРМАТОВ → ОБЛАКО ТОЧЕК
+   ============================================================ */
+async function fileToPoints(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const buffer = await file.arrayBuffer();
+  let object3d = null;
+
+  // 1. STL
+  if (ext === 'stl') {
+    const loader = new STLLoader();
+    const geometry = loader.parse(buffer);
+    object3d = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
+  }
+  // 2. OBJ
+  else if (ext === 'obj') {
+    const text = new TextDecoder().decode(buffer);
+    const loader = new OBJLoader();
+    object3d = loader.parse(text);
+  }
+  // 3. FBX (может быть капризным)
+  else if (ext === 'fbx') {
+    const loader = new FBXLoader();
+    // FBXLoader.parse принимает ArrayBuffer и path (для текстур, нам не нужны)
+    object3d = loader.parse(buffer, '');
+  }
+  // 4. 3MF
+  else if (ext === '3mf') {
+    const loader = new ThreeMFLoader();
+    object3d = loader.parse(buffer);
+  }
+  else {
+    throw new Error(`Формат .${ext} не поддерживается. Используйте STL, OBJ, FBX или 3MF.`);
+  }
+
+  if (!object3d) throw new Error('Не удалось распарсить геометрию.');
+
+  // Сбор точек со всех мешей
+  const pointsArray = [];
+  object3d.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const pos = child.geometry.attributes.position;
+      if (!pos) return;
+      for (let i = 0; i < pos.count; i++) {
+        pointsArray.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+      }
+    }
+  });
+
+  if (pointsArray.length === 0) throw new Error('В файле не найдено полигональной геометрии.');
+
+  // Сэмплирование 1024 точек
+  const totalVerts = pointsArray.length / 3;
+  const sampled = new Float32Array(NUM_POINTS * 3);
+  for (let i = 0; i < NUM_POINTS; i++) {
+    const idx = Math.floor(Math.random() * totalVerts) * 3;
+    sampled[i * 3] = pointsArray[idx];
+    sampled[i * 3 + 1] = pointsArray[idx + 1];
+    sampled[i * 3 + 2] = pointsArray[idx + 2];
+  }
+
+  // Нормализация (центрирование + единичная сфера)
+  let cx = 0, cy = 0, cz = 0;
+  for (let i = 0; i < NUM_POINTS; i++) {
+    cx += sampled[i * 3]; cy += sampled[i * 3 + 1]; cz += sampled[i * 3 + 2];
+  }
+  cx /= NUM_POINTS; cy /= NUM_POINTS; cz /= NUM_POINTS;
+  let maxR = 0;
+  for (let i = 0; i < NUM_POINTS; i++) {
+    sampled[i * 3] -= cx; sampled[i * 3 + 1] -= cy; sampled[i * 3 + 2] -= cz;
+    const r = Math.hypot(sampled[i * 3], sampled[i * 3 + 1], sampled[i * 3 + 2]);
+    if (r > maxR) maxR = r;
+  }
+  if (maxR > 0) for (let i = 0; i < NUM_POINTS * 3; i++) sampled[i] /= maxR;
+
+  return sampled;
+}
+
+/* ============================================================
+   ИНФЕРЕНС
+   ============================================================ */
+async function classify(points) {
+  const session = await loadModel();
+  const input = new Float32Array(3 * NUM_POINTS);
+  for (let i = 0; i < NUM_POINTS; i++) {
+    input[i] = points[i * 3];
+    input[NUM_POINTS + i] = points[i * 3 + 1];
+    input[2 * NUM_POINTS + i] = points[i * 3 + 2];
+  }
+  const tensor = new ort.Tensor('float32', input, [1, 3, NUM_POINTS]);
+  const feeds = {}; feeds[session.inputNames[0]] = tensor;
+  const out = await session.run(feeds);
+  const logits = out[session.outputNames[0]].data;
+  const maxL = Math.max(...logits);
+  const exps = Array.from(logits).map(v => Math.exp(v - maxL));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  const probs = exps.map(v => v / sum);
+  const indexed = probs.map((p, i) => ({ p, i })).sort((a, b) => b.p - a.p);
+  const top3 = indexed.slice(0, 3).map(({ p, i }) => ({ class: CLASSES[i], conf: p }));
+  return { top1: top3[0], top3 };
+}
+
+/* ============================================================
+   КНОПКА АНАЛИЗА
+   ============================================================ */
+$('#runBtn').addEventListener('click', async () => {
+  if (!selectedFile) return;
+  const btn = $('#runBtn');
+  btn.disabled = true; btn.textContent = '⏳ Анализ…';
+  setStatus('анализ…', 'var(--accent)');
+  try {
+    log('Парсинг геометрии…');
+    const points = await fileToPoints(selectedFile);
+    log('Облако точек готово');
+    const { top1, top3 } = await classify(points);
+    lastResult = { class: top1.class, confidence: top1.conf, top3, file: selectedFile };
+    $('#classValue').textContent = top1.class;
+    $('#confValue').textContent = (top1.conf * 100).toFixed(1) + '%';
+    const paramsEl = $('#topkParams'); paramsEl.innerHTML = '';
+    top3.forEach((t, i) => {
+      const div = document.createElement('div');
+      div.className = 'param';
+      div.innerHTML = `<span class="pk">top-${i+1}</span><span class="pv ${i===0?'accent':''}">${t.class} · ${(t.conf*100).toFixed(1)}%</span>`;
+      paramsEl.appendChild(div);
+    });
+    setStatus('готово', 'var(--green)');
+    log('Класс: ' + top1.class);
+  } catch (e) {
+    console.error(e); setStatus('ошибка', 'red'); log('ОШИБКА: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Анализировать модель';
+  }
+});
+
+/* ============================================================
+   СОХРАНЕНИЕ ПО ПАПКАМ
+   ============================================================ */
+$('#sortBtn').addEventListener('click', async () => {
+  if (!lastResult) { alert('Сначала проанализируйте модель.'); return; }
+  if (!('showDirectoryPicker' in window)) {
+    // Fallback ZIP
+    const zip = new JSZip();
+    zip.file(lastResult.class + '/' + lastResult.file.name, lastResult.file);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sorted.zip'; a.click();
+    return;
+  }
+  try {
+    const rootDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+    const classDir = await rootDir.getDirectoryHandle(lastResult.class, { create: true });
+    const fileHandle = await classDir.getFileHandle(lastResult.file.name, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(lastResult.file);
+    await writable.close();
+    log(`Сохранено: ${lastResult.class}/${lastResult.file.name}`);
+    alert(`Файл сохранён в папку "${lastResult.class}".`);
+  } catch (e) {
+    if (e.name !== 'AbortError') log('Ошибка: ' + e.message);
+  }
+});
+</script>
+</body>
+</html>
